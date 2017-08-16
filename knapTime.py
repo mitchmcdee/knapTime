@@ -2,13 +2,19 @@ import random
 import numpy
 from copy import deepcopy
 
-POPULATION_SIZE = 100
-MUTATION_RATE = 0.05
+POPULATION_SIZE = 10
+MUTATION_RATE = 0.001
 CROSSOVER_RATE = 0.1
 
-KNAPSACK_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 25, 36, 51, 87, 129, 301]
-KNAPSACK_LIMIT = 44
-GENERATION_LIMIT = 50
+KNAPSACK_OPTIONS = [random.randrange(100) for i in range(100)]
+KNAPSACK_LIMIT = 3418
+GENERATION_LIMIT = 1
+
+
+#TODO(mitch): add values to the weights
+#TODO(mitch): incorporate crossover (two parents roulette?)
+#TODO(mitch): do better mutation
+#TODO(mitch): convert to bit array
 
 def getNormalisedCumulativePopulation():
     data = numpy.random.randn(POPULATION_SIZE * 10)
