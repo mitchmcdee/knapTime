@@ -2,14 +2,13 @@ import random
 import numpy
 from copy import deepcopy
 
-POPULATION_SIZE = 10
+POPULATION_SIZE = 100
 MUTATION_RATE = 0.001
 CROSSOVER_RATE = 0.1
 
-KNAPSACK_OPTIONS = [random.randrange(100) for i in range(100)]
+KNAPSACK_OPTIONS = [[random.randrange(i*20), random.randrange(i*10)] for i in range(1,301)]
 KNAPSACK_LIMIT = 3418
-GENERATION_LIMIT = 1
-
+GENERATION_LIMIT = 10000
 
 #TODO(mitch): add values to the weights
 #TODO(mitch): incorporate crossover (two parents roulette?)
@@ -26,7 +25,7 @@ def getNormalisedCumulativePopulation():
 def getValidCreature():
     while True:
         creature = Creature()
-        if creature.getLimit() <= KNAPSACK_LIMIT:
+        if creature.getWeight() <= KNAPSACK_LIMIT:
             break
 
     return creature
@@ -67,9 +66,9 @@ class Generation:
         self.sortCreatures()
 
         creatures = [c.getFitness() for c in self.creatures]
-        bestCreature = self.creatures[0].getFitness()
-        averageCreature = self.creatures[POPULATION_SIZE // 2].getFitness()
-        worstCreature = self.creatures[POPULATION_SIZE - 1].getFitness()
+        bestCreature = self.creatures[0]
+        averageCreature = self.creatures[POPULATION_SIZE // 2]
+        worstCreature = self.creatures[POPULATION_SIZE - 1]
 
         print(f'Generation {self.genNumber}:')
         print(f'{creatures}\n')
@@ -103,10 +102,13 @@ class Creature:
         self.marked = True
 
     def getFitness(self):
-        return self.getLimit() if self.getLimit() < KNAPSACK_LIMIT else 0
+        return sum(item[0] for item in self.items) if self.getWeight() < KNAPSACK_LIMIT else 0
 
-    def getLimit(self):
-        return sum(self.items)
+    def getWeight(self):
+        return sum(item[1] for item in self.items)
+
+    def __str__(self):
+        return str(self.getFitness()) + ' at weight ' + str(self.getWeight())
 
 
 NORM_CUMULATIVE = getNormalisedCumulativePopulation()
