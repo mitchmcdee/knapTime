@@ -14,7 +14,7 @@ GENERATION_JUMP = 100
 MAX_ITEM_WEIGHT = 10
 MAX_ITEM_VALUE = 100
 KNAPSACK_ITEMS = 100
-KNAPSACK_LIMIT = 274
+KNAPSACK_LIMIT = 537
 KNAPSACK_OPTIONS = [[random.randrange(MAX_ITEM_VALUE), random.randrange(1, MAX_ITEM_WEIGHT)] for _ in range(KNAPSACK_ITEMS)]
 
 # Population class holding a generation of creatures
