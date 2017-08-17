@@ -23,9 +23,9 @@ class Population:
     def __init__(self):
         self.genNumber = 0
         self.creatures = [Creature() for _ in range(POPULATION_SIZE)]
-        self.bestCreaturePlot, = plot.plot([], [])
-        self.averageCreaturePlot, = plot.plot([], [])
-        self.worstCreaturePlot, = plot.plot([], [])
+        self.bestCreaturePlot, = plot.plot([], [], label='Best Creature')
+        self.averageCreaturePlot, = plot.plot([], [], label='Average Creature')
+        self.worstCreaturePlot, = plot.plot([], [], label='Worst Creature')
 
     # Sort all the creatures by their fitness (and then by weight)
     def sortCreatures(self):
@@ -129,24 +129,29 @@ class Creature:
         return str(self.getFitness()) + ' at weight ' + str(self.getWeight())
 
 
-# Setup interactive plot
-plot.ion()
-
 # Generate normalised cumulative distribution of population
 data = numpy.random.randn(POPULATION_SIZE)
 values, _ = numpy.histogram(data, bins=POPULATION_SIZE)
 cumulative = numpy.cumsum(values)
 NORM_CUMULATIVE = [float(i) / max(cumulative) for i in cumulative]
 
-# Begin evolutionary process
+# Generate initial population
 population = Population()
+
+# Setup interactive plot
+plot.ion()
+plot.title('Knapsack Fitness over Time')
+plot.xlabel('Generation Number')
+plot.ylabel('Fitness')
+plot.legend()
+
+# Begin evolutionary process
 for _ in range(GENERATION_LIMIT):
     if population.genNumber % GENERATION_JUMP == 0:
         population.printGenerationStats()
         population.updateGraph()
 
     population.mutate()
-
 
 # Wait for user input to end program
 input('Press any key to exit program')
