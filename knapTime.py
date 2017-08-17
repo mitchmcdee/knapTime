@@ -5,33 +5,45 @@ import matplotlib.pyplot as plot
 from copy import deepcopy
 
 POPULATION_SIZE = 10
-MUTATION_RATE = 0.05
+MUTATION_RATE = 0.8
 CROSSOVER_RATE = 0.5
 
-GENERATION_LIMIT = 10000
-GENERATION_JUMP = 100
+GENERATION_LIMIT = 1000
+GENERATION_JUMP = 10
 
 MAX_ITEM_WEIGHT = 10
 MAX_ITEM_VALUE = 100
-KNAPSACK_ITEMS = 100
-KNAPSACK_LIMIT = 837
+KNAPSACK_ITEMS = 500
+KNAPSACK_LIMIT = 341
 KNAPSACK_OPTIONS = [[random.randrange(MAX_ITEM_VALUE), random.randrange(1, MAX_ITEM_WEIGHT)] for _ in range(KNAPSACK_ITEMS)]
+
 
 # Population class holding a generation of creatures
 class Population:
     def __init__(self):
         self.genNumber = 0
         self.creatures = [Creature() for _ in range(POPULATION_SIZE)]
-        self.plotData, = plot.plot([], [])
+        self.bestCreaturePlot, = plot.plot([], [])
+        self.averageCreaturePlot, = plot.plot([], [])
+        self.worstCreaturePlot, = plot.plot([], [])
 
     # Sort all the creatures by their fitness (and then by weight)
     def sortCreatures(self):
         self.creatures.sort(key=lambda c: (c.getFitness(), c.getWeight()), reverse=True)
 
-    # Add current generation to the graph
+    # Add current generation's best, average and worst creature to the graph
     def updateGraph(self):
-        self.plotData.set_xdata(numpy.append(self.plotData.get_xdata(), self.genNumber))
-        self.plotData.set_ydata(numpy.append(self.plotData.get_ydata(), self.creatures[0].getFitness()))
+        # Add gen number to x axis data
+        self.bestCreaturePlot.set_xdata(numpy.append(self.bestCreaturePlot.get_xdata(), self.genNumber))
+        self.averageCreaturePlot.set_xdata(numpy.append(self.averageCreaturePlot.get_xdata(), self.genNumber))
+        self.worstCreaturePlot.set_xdata(numpy.append(self.worstCreaturePlot.get_xdata(), self.genNumber))
+
+        # Add fitness to y axis data
+        self.bestCreaturePlot.set_ydata(numpy.append(self.bestCreaturePlot.get_ydata(), self.creatures[0].getFitness()))
+        self.averageCreaturePlot.set_ydata(numpy.append(self.averageCreaturePlot.get_ydata(), self.creatures[POPULATION_SIZE // 2].getFitness()))
+        self.worstCreaturePlot.set_ydata(numpy.append(self.worstCreaturePlot.get_ydata(), self.creatures[-1].getFitness()))
+
+        # Rescale graph
         axes = plot.gca()
         axes.relim()
         axes.autoscale_view()
@@ -68,7 +80,7 @@ class Population:
         self.sortCreatures()
         bestCreature = self.creatures[0]
         averageCreature = self.creatures[POPULATION_SIZE // 2]
-        worstCreature = self.creatures[POPULATION_SIZE - 1]
+        worstCreature = self.creatures[-1]
 
         print(f'Generation {self.genNumber} | Best: {bestCreature} | Average: {averageCreature} | Worst: {worstCreature}')
 
@@ -116,6 +128,7 @@ class Creature:
     def __str__(self):
         return str(self.getFitness()) + ' at weight ' + str(self.getWeight())
 
+
 # Setup interactive plot
 plot.ion()
 
@@ -128,11 +141,12 @@ NORM_CUMULATIVE = [float(i) / max(cumulative) for i in cumulative]
 # Begin evolutionary process
 population = Population()
 for _ in range(GENERATION_LIMIT):
-    population.mutate()
-
     if population.genNumber % GENERATION_JUMP == 0:
         population.printGenerationStats()
         population.updateGraph()
+
+    population.mutate()
+
 
 # Wait for user input to end program
 input('Press any key to exit program')
