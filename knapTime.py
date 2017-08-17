@@ -5,18 +5,17 @@ import matplotlib.pyplot as plot
 from copy import deepcopy
 
 POPULATION_SIZE = 10
-MUTATION_RATE = 0.8
+MUTATION_RATE = 0.01
 CROSSOVER_RATE = 0.5
 
-GENERATION_LIMIT = 1000
-GENERATION_JUMP = 10
+GENERATION_LIMIT = 10000
+GENERATION_JUMP = 100
 
 MAX_ITEM_WEIGHT = 10
 MAX_ITEM_VALUE = 100
-KNAPSACK_ITEMS = 500
-KNAPSACK_LIMIT = 341
+KNAPSACK_ITEMS = 100
+KNAPSACK_LIMIT = 274
 KNAPSACK_OPTIONS = [[random.randrange(MAX_ITEM_VALUE), random.randrange(1, MAX_ITEM_WEIGHT)] for _ in range(KNAPSACK_ITEMS)]
-
 
 # Population class holding a generation of creatures
 class Population:
@@ -66,9 +65,19 @@ class Population:
                 if marked == POPULATION_SIZE // 2:
                     break
 
-        # Breed and mutate the remaining creatures, performing parent roulette
+        # Get list of creatures who survived the purge
         purgedCreatures = [c for c in self.creatures if c.marked is not True]
-        mutatedCreatures = [c.breed(purgedCreatures[random.randrange(len(purgedCreatures))]) for c in purgedCreatures]
+
+        # Reproduce by either cross breeding or cloning
+        mutatedCreatures = []
+        for c in purgedCreatures:
+            newCreature = c.clone()
+            if random.random() < CROSSOVER_RATE:
+                partner = purgedCreatures[random.randrange(len(purgedCreatures))]
+                newCreature = c.breed(partner)
+
+            mutatedCreatures.append(newCreature)
+
         self.creatures = purgedCreatures + mutatedCreatures
 
     # Mark a creature for death
@@ -92,17 +101,27 @@ class Creature:
         self.items = [1 if bool(random.getrandbits(1)) else 0 for _ in range(KNAPSACK_ITEMS)]
         self.marked = False
 
-    # Breed the creature with a partner
+    # Breed the creature with a partner and give it the chance to mutate
     def breed(self, partner):
-        offspring = deepcopy(self)
+        offspring = Creature()
         # Take a random amount of 'genes' (items) from each parent
-        offspring.items = [self.items[i] if random.random() < CROSSOVER_RATE else partner.items[i] for i in range(KNAPSACK_ITEMS)]
+        offspring.items = [self.items[i] if bool(random.getrandbits(1)) else partner.items[i] for i in range(KNAPSACK_ITEMS)]
 
         # Randomly mutate the offpsring
         if random.random() < MUTATION_RATE:
             offspring.mutate()
 
         return offspring
+
+    # Clone the creature and give it the chance to mutate
+    def clone(self):
+        clone = deepcopy(self)
+
+        # Randomly mutate the clone
+        if random.random() < MUTATION_RATE:
+            clone.mutate()
+
+        return clone
 
     # Mutate the creature by toggling one of its items
     def mutate(self):
@@ -118,7 +137,11 @@ class Creature:
 
     # Get the fitness score for the creature
     def getFitness(self):
-        return sum([item[0] for item in self.getItems()]) if self.getWeight() <= KNAPSACK_LIMIT else -self.getWeight() + KNAPSACK_LIMIT
+        return self.getValue() if self.getWeight() <= KNAPSACK_LIMIT else -self.getWeight() + KNAPSACK_LIMIT
+
+    # Get the value for the creature
+    def getValue(self):
+        return sum([item[0] for item in self.getItems()])
 
     # Get the weight for the creature
     def getWeight(self):
