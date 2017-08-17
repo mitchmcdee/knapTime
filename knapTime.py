@@ -1,120 +1,119 @@
 import random
 import numpy
+import sys
+import matplotlib.pyplot as plot
 from copy import deepcopy
 
-POPULATION_SIZE = 100
-MUTATION_RATE = 0.001
-CROSSOVER_RATE = 0.1
+POPULATION_SIZE = 10
+MUTATION_RATE = 0.05
+CROSSOVER_RATE = 0.5
 
-KNAPSACK_OPTIONS = [[random.randrange(i*20), random.randrange(i*10)] for i in range(1,301)]
-KNAPSACK_LIMIT = 3418
 GENERATION_LIMIT = 10000
+GENERATION_JUMP = 100
 
-#TODO(mitch): add values to the weights
-#TODO(mitch): incorporate crossover (two parents roulette?)
-#TODO(mitch): do better mutation
-#TODO(mitch): convert to bit array
-
-def getNormalisedCumulativePopulation():
-    data = numpy.random.randn(POPULATION_SIZE * 10)
-    values, _ = numpy.histogram(data, bins=POPULATION_SIZE)
-    cumulative = numpy.cumsum(values)
-    return [float(i) / max(cumulative) for i in cumulative]
-
-
-def getValidCreature():
-    while True:
-        creature = Creature()
-        if creature.getWeight() <= KNAPSACK_LIMIT:
-            break
-
-    return creature
-
+MAX_ITEM_WEIGHT = 10
+MAX_ITEM_VALUE = 100
+KNAPSACK_ITEMS = 100
+KNAPSACK_LIMIT = 837
+KNAPSACK_OPTIONS = [[random.randrange(MAX_ITEM_VALUE), random.randrange(1, MAX_ITEM_WEIGHT)] for _ in range(KNAPSACK_ITEMS)]
 
 class Generation:
     def __init__(self):
         self.genNumber = 0
-        self.creatures = [getValidCreature() for _ in range(POPULATION_SIZE)]
+        self.creatures = [Creature() for _ in range(POPULATION_SIZE)]
+        self.plotData, = plot.plot([], [])
 
     def sortCreatures(self):
-        self.creatures.sort(key=lambda c: c.getFitness(), reverse=True)
+        self.creatures.sort(key=lambda c: (c.getFitness(), c.getWeight()), reverse=True)
+
+    def updateGraph(self):
+        self.plotData.set_xdata(numpy.append(self.plotData.get_xdata(), generation.genNumber))
+        self.plotData.set_ydata(numpy.append(self.plotData.get_ydata(), generation.creatures[0].getFitness()))
+        axes = plot.gca()
+        axes.relim()
+        axes.autoscale_view()
+        plot.pause(sys.float_info.epsilon)
 
     def mutate(self):
         self.sortCreatures()
+        self.genNumber += 1
 
         marked = 0
         while marked != POPULATION_SIZE // 2:
-            markCutoff = random.random()
             for i in range(POPULATION_SIZE):
-                if NORM_CUMULATIVE[i] < markCutoff or self.creatures[i].marked:
+                if NORM_CUMULATIVE[i] < random.random() or self.creatures[i].marked:
                     continue
 
                 self.markForDeath(i)
                 marked += 1
-                break
+                if marked == POPULATION_SIZE // 2:
+                    break
 
         purgedCreatures = [c for c in self.creatures if c.marked is not True]
-        mutatedCreatures = [c.mutate() for c in purgedCreatures]
-
+        mutatedCreatures = [c.breed(purgedCreatures[random.randrange(len(purgedCreatures))]) for c in purgedCreatures]
         self.creatures = purgedCreatures + mutatedCreatures
-        self.genNumber += 1
 
     def markForDeath(self, index):
         self.creatures[index].mark()
 
     def printGenerationStats(self):
         self.sortCreatures()
-
-        creatures = [c.getFitness() for c in self.creatures]
         bestCreature = self.creatures[0]
         averageCreature = self.creatures[POPULATION_SIZE // 2]
         worstCreature = self.creatures[POPULATION_SIZE - 1]
 
-        print(f'Generation {self.genNumber}:')
-        print(f'{creatures}\n')
-        print(f'Best: {bestCreature}')
-        print(f'Average: {averageCreature}')
-        print(f'Worst: {worstCreature}\n\n')
+        print(f'Generation {self.genNumber} | Best: {bestCreature} | Average: {averageCreature} | Worst: {worstCreature}')
 
 
 class Creature:
     def __init__(self):
-        size = random.randrange(1, len(KNAPSACK_OPTIONS))
-        self.items = [KNAPSACK_OPTIONS[random.randrange(size)] for _ in range(size)]
+        self.items = [1 if bool(random.getrandbits(1)) else 0 for _ in range(KNAPSACK_ITEMS)]
         self.marked = False
 
+    def breed(self, partner):
+        offspring = deepcopy(self)
+        offspring.items = [self.items[i] if random.random() < CROSSOVER_RATE else partner.items[i] for i in range(KNAPSACK_ITEMS)]
+
+        if random.random() < MUTATION_RATE:
+            offspring.mutate()
+
+        return offspring
+
     def mutate(self):
-        mutation = deepcopy(self)
-
-        mutationNumber = random.random()
-        if mutationNumber < MUTATION_RATE and len(mutation.items) > 1:
-            del mutation.items[random.randrange(len(mutation.items))]
-
-        elif mutationNumber < 3 * MUTATION_RATE and mutationNumber > MUTATION_RATE:
-            mutation.items.append(KNAPSACK_OPTIONS[random.randrange(len(KNAPSACK_OPTIONS))])
-
-        else:
-            mutation.items[random.randrange(len(mutation.items))] = KNAPSACK_OPTIONS[random.randrange(len(KNAPSACK_OPTIONS))]
-
-        return mutation
+        self.items[random.randrange(KNAPSACK_ITEMS)] ^= 1
 
     def mark(self):
         self.marked = True
 
+    def getItems(self):
+        return [KNAPSACK_OPTIONS[item] for item in self.items if item == 1]
+
     def getFitness(self):
-        return sum(item[0] for item in self.items) if self.getWeight() < KNAPSACK_LIMIT else 0
+        return sum([item[0] for item in self.getItems()]) if self.getWeight() <= KNAPSACK_LIMIT else -self.getWeight() + KNAPSACK_LIMIT
 
     def getWeight(self):
-        return sum(item[1] for item in self.items)
+        return sum([item[1] for item in self.getItems()])
 
     def __str__(self):
         return str(self.getFitness()) + ' at weight ' + str(self.getWeight())
 
+# Setup interactive plot
+plot.ion()
 
-NORM_CUMULATIVE = getNormalisedCumulativePopulation()
+# Generate normalised cumulative distribution of population
+data = numpy.random.randn(POPULATION_SIZE)
+values, _ = numpy.histogram(data, bins=POPULATION_SIZE)
+cumulative = numpy.cumsum(values)
+NORM_CUMULATIVE = [float(i) / max(cumulative) for i in cumulative]
 
+# Begin evolutionary process
 generation = Generation()
-generation.printGenerationStats()
 for _ in range(GENERATION_LIMIT):
     generation.mutate()
-    generation.printGenerationStats()
+
+    if generation.genNumber % GENERATION_JUMP == 0:
+        generation.printGenerationStats()
+        generation.updateGraph()
+
+# Wait for user input to end program
+input('Press any key to exit program')
